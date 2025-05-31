@@ -1,0 +1,379 @@
+{
+  "12": {
+    "inputs": {
+      "vae_name": "hunyuan_video_vae_bf16.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE"
+    }
+  },
+  "13": {
+    "inputs": {
+      "clip_name1": "clip_l.safetensors",
+      "clip_name2": "llava_llama3_fp16.safetensors",
+      "type": "hunyuan_video",
+      "device": "default"
+    },
+    "class_type": "DualCLIPLoader",
+    "_meta": {
+      "title": "双CLIP加载器"
+    }
+  },
+  "15": {
+    "inputs": {
+      "conditioning": [
+        "47",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "条件零化"
+    }
+  },
+  "17": {
+    "inputs": {
+      "crop": "none",
+      "clip_vision": [
+        "18",
+        0
+      ],
+      "image": [
+        "114",
+        0
+      ]
+    },
+    "class_type": "CLIPVisionEncode",
+    "_meta": {
+      "title": "CLIP视觉编码"
+    }
+  },
+  "18": {
+    "inputs": {
+      "clip_name": "sigclip_vision_patch14_384.safetensors"
+    },
+    "class_type": "CLIPVisionLoader",
+    "_meta": {
+      "title": "加载CLIP视觉"
+    }
+  },
+  "20": {
+    "inputs": {
+      "pixels": [
+        "114",
+        0
+      ],
+      "vae": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE编码"
+    }
+  },
+  "27": {
+    "inputs": {
+      "backend": "inductor",
+      "fullgraph": false,
+      "mode": "default",
+      "dynamic": false,
+      "dynamo_cache_size_limit": 64,
+      "compile_single_blocks": true,
+      "compile_double_blocks": true
+    },
+    "class_type": "FramePackTorchCompileSettings",
+    "_meta": {
+      "title": "Torch Compile Settings"
+    }
+  },
+  "33": {
+    "inputs": {
+      "tile_size": 256,
+      "overlap": 64,
+      "temporal_size": 64,
+      "temporal_overlap": 8,
+      "samples": [
+        "107",
+        0
+      ],
+      "vae": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeTiled",
+    "_meta": {
+      "title": "VAE解码（分块）"
+    }
+  },
+  "47": {
+    "inputs": {
+      "text": "Convert reference images of poses and expressions into character design images.",
+      "clip": [
+        "13",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP文本编码"
+    }
+  },
+  "52": {
+    "inputs": {
+      "model": "FramePackI2V_HY_fp8_e4m3fn.safetensors",
+      "base_precision": "bf16",
+      "quantization": "fp8_e4m3fn",
+      "load_device": "offload_device",
+      "attention_mode": "sdpa",
+      "lora": [
+        "70",
+        0
+      ]
+    },
+    "class_type": "LoadFramePackModel",
+    "_meta": {
+      "title": "Load FramePackModel"
+    }
+  },
+  "70": {
+    "inputs": {
+      "lora": "body2img_V7_kisekaeichi_dim4_1e-3_512_768-000140.safetensors",
+      "strength": 1,
+      "fuse_lora": false
+    },
+    "class_type": "FramePackLoraSelect",
+    "_meta": {
+      "title": "Select Lora"
+    }
+  },
+  "76": {
+    "inputs": {
+      "image": "Screenshot 2025-05-31 155854.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "CharacterImage"
+    }
+  },
+  "77": {
+    "inputs": {
+      "image": "image (5).webp"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "PoseImage"
+    }
+  },
+  "87": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "33",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "保存图像"
+    }
+  },
+  "103": {
+    "inputs": {
+      "start_index": 1,
+      "num_frames": 1
+    },
+    "class_type": "GetLatentRangeFromBatch",
+    "_meta": {
+      "title": "Get Latent Range From Batch"
+    }
+  },
+  "107": {
+    "inputs": {
+      "steps": 30,
+      "use_teacache": true,
+      "teacache_rel_l1_thresh": 0.15,
+      "cfg": 1,
+      "guidance_scale": 7.520000000000001,
+      "shift": 0,
+      "seed": 634936421976103,
+      "latent_window_size": 9,
+      "gpu_memory_preservation": 25,
+      "sampler": "unipc_bh1",
+      "use_kisekaeichi": true,
+      "denoise_strength": 1,
+      "target_index": 5,
+      "history_index": 10,
+      "model": [
+        "52",
+        0
+      ],
+      "positive": [
+        "47",
+        0
+      ],
+      "negative": [
+        "15",
+        0
+      ],
+      "start_latent": [
+        "20",
+        0
+      ],
+      "image_embeds": [
+        "17",
+        0
+      ],
+      "initial_samples": [
+        "20",
+        0
+      ],
+      "reference_latent": [
+        "109",
+        0
+      ],
+      "reference_image_embeds": [
+        "112",
+        0
+      ]
+    },
+    "class_type": "FramePackSingleFrameSampler",
+    "_meta": {
+      "title": "FramePack Single Frame Sampler"
+    }
+  },
+  "109": {
+    "inputs": {
+      "pixels": [
+        "115",
+        0
+      ],
+      "vae": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE编码"
+    }
+  },
+  "112": {
+    "inputs": {
+      "crop": "none",
+      "clip_vision": [
+        "18",
+        0
+      ],
+      "image": [
+        "115",
+        0
+      ]
+    },
+    "class_type": "CLIPVisionEncode",
+    "_meta": {
+      "title": "CLIP视觉编码"
+    }
+  },
+  "113": {
+    "inputs": {
+      "base_resolution": 640,
+      "image": [
+        "77",
+        0
+      ]
+    },
+    "class_type": "FramePackFindNearestBucket",
+    "_meta": {
+      "title": "Find Nearest Bucket"
+    }
+  },
+  "114": {
+    "inputs": {
+      "width": [
+        "113",
+        0
+      ],
+      "height": [
+        "113",
+        1
+      ],
+      "interpolation": "nearest",
+      "method": "stretch",
+      "condition": "always",
+      "multiple_of": 0,
+      "image": [
+        "77",
+        0
+      ]
+    },
+    "class_type": "ImageResize+",
+    "_meta": {
+      "title": "🔧 Image Resize"
+    }
+  },
+  "115": {
+    "inputs": {
+      "width": [
+        "113",
+        0
+      ],
+      "height": [
+        "113",
+        1
+      ],
+      "interpolation": "nearest",
+      "method": "stretch",
+      "condition": "always",
+      "multiple_of": 0,
+      "image": [
+        "76",
+        0
+      ]
+    },
+    "class_type": "ImageResize+",
+    "_meta": {
+      "title": "🔧 Image Resize"
+    }
+  },
+  "117": {
+    "inputs": {
+      "inputcount": 3,
+      "direction": "right",
+      "match_image_size": false,
+      "Update inputs": null,
+      "image_1": [
+        "114",
+        0
+      ],
+      "image_2": [
+        "115",
+        0
+      ],
+      "image_3": [
+        "33",
+        0
+      ]
+    },
+    "class_type": "ImageConcatMulti",
+    "_meta": {
+      "title": "Image Concatenate Multi"
+    }
+  },
+  "118": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "117",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "保存图像"
+    }
+  }
+}
