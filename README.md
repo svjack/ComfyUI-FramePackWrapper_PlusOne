@@ -1,4 +1,157 @@
 # ComfyUI-FramePackWrapper_PlusOne
+
+## Scaramouche Demo
+
+```python
+vim run_hy.py
+
+from comfy_script.runtime import *
+load()
+from comfy_script.runtime.nodes import *
+with Workflow():
+    # _ = FramePackTorchCompileSettings('inductor', False, 'default', False, 64, True, True)
+    lora = FramePackLoraSelect('body2img_V7_kisekaeichi_dim4_1e-3_512_768-000140.safetensors', 1, False, None)
+    model = LoadFramePackModel('FramePackI2V_HY_fp8_e4m3fn.safetensors', 'bf16', 'fp8_e4m3fn', 'offload_device', 'sdpa', None, lora)
+    clip = DualCLIPLoader('clip_l.safetensors', 'llava_llama3_fp16.safetensors', 'hunyuan_video', 'default')
+    conditioning = CLIPTextEncode('Convert reference images of poses and expressions into character design images.', clip)
+    conditioning2 = ConditioningZeroOut(conditioning)
+    image, _ = LoadImage('image (5).webp')
+    width, height = FramePackFindNearestBucket(image, 640)
+    image2, _, _ = ImageResize(image, width, height, 'nearest', 'stretch', 'always', 0)
+    vae = VAELoader('hunyuan_video_vae_bf16.safetensors')
+    latent = VAEEncode(image2, vae)
+    clip_vision = CLIPVisionLoader('sigclip_vision_patch14_384.safetensors')
+    clip_vision_output = CLIPVisionEncode(clip_vision, image2, 'none')
+    image3, _ = LoadImage('Screenshot 2025-05-31 155854.png')
+    image3, _, _ = ImageResize(image3, width, height, 'nearest', 'stretch', 'always', 0)
+    latent2 = VAEEncode(image3, vae)
+    clip_vision_output2 = CLIPVisionEncode(clip_vision, image3, 'none')
+    samples = FramePackSingleFrameSampler(model, conditioning, conditioning2, latent, 30, True, 0.15, 1, 7.520000000000001, 0, 634936421976103, 9, 25, 'unipc_bh1', True, clip_vision_output, latent, 1, latent2, clip_vision_output2, 5, 10, None, None)
+    image4 = VAEDecodeTiled(samples, vae, 256, 64, 64, 8)
+    SaveImage(image4, 'ComfyUI')
+
+vim run_hy_iter.py
+
+import os
+import time
+import subprocess
+from pathlib import Path
+from datasets import load_dataset
+
+# Configuration
+SEED = 661695664686456
+STYLE_IMAGE_PATH = 'Screenshot 2025-05-31 155854.png'  # 对应 Screenshot 2025-05-31 155854.png
+OUTPUT_DIR = 'ComfyUI/output'
+INPUT_DIR = 'ComfyUI/input'
+PYTHON_PATH = '/environment/miniconda3/bin/python'
+
+def get_latest_output_count():
+    """Return the number of PNG files in the output directory"""
+    try:
+        return len(list(Path(OUTPUT_DIR).glob('*.png')))
+    except:
+        return 0
+
+def wait_for_new_output(initial_count):
+    """Wait until a new PNG file appears in the output directory"""
+    timeout = 6000  # seconds
+    start_time = time.time()
+    
+    while time.time() - start_time < timeout:
+        current_count = get_latest_output_count()
+        if current_count > initial_count:
+            time.sleep(1)  # additional 1 second delay
+            return True
+        time.sleep(0.5)
+    return False
+
+def download_sketch_images():
+    """Download sketch images from Hugging Face dataset"""
+    # 创建输入目录如果不存在
+    os.makedirs(INPUT_DIR, exist_ok=True)
+    
+    # 加载数据集
+    dataset = load_dataset("svjack/Genshin_Impact_Scaramouche_Images_1024x1024_with_sketch")
+    
+    # 下载 sketch_image 列的图片
+    for i, item in enumerate(dataset['train']):
+        sketch_image = item['sketch_image']
+        image_path = os.path.join(INPUT_DIR, f"sketch_{i}.png")
+        sketch_image.save(image_path)
+    
+    return [f"sketch_{i}.png" for i in range(len(dataset['train']))]
+
+def generate_script(image_name, seed):
+    """Generate the ComfyUI script with the given image and seed"""
+    script_content = f"""from comfy_script.runtime import *
+load()
+from comfy_script.runtime.nodes import *
+with Workflow():
+    # _ = FramePackTorchCompileSettings('inductor', False, 'default', False, 64, True, True)
+    lora = FramePackLoraSelect('body2img_V7_kisekaeichi_dim4_1e-3_512_768-000140.safetensors', 1, False, None)
+    model = LoadFramePackModel('FramePackI2V_HY_fp8_e4m3fn.safetensors', 'bf16', 'fp8_e4m3fn', 'offload_device', 'sdpa', None, lora)
+    clip = DualCLIPLoader('clip_l.safetensors', 'llava_llama3_fp16.safetensors', 'hunyuan_video', 'default')
+    conditioning = CLIPTextEncode('Convert reference images of poses and expressions into character design images.', clip)
+    conditioning2 = ConditioningZeroOut(conditioning)
+    image, _ = LoadImage('{image_name}')
+    width, height = FramePackFindNearestBucket(image, 640)
+    image2, _, _ = ImageResize(image, width, height, 'nearest', 'stretch', 'always', 0)
+    vae = VAELoader('hunyuan_video_vae_bf16.safetensors')
+    latent = VAEEncode(image2, vae)
+    clip_vision = CLIPVisionLoader('sigclip_vision_patch14_384.safetensors')
+    clip_vision_output = CLIPVisionEncode(clip_vision, image2, 'none')
+    image3, _ = LoadImage('{STYLE_IMAGE_PATH}')
+    image3, _, _ = ImageResize(image3, width, height, 'nearest', 'stretch', 'always', 0)
+    latent2 = VAEEncode(image3, vae)
+    clip_vision_output2 = CLIPVisionEncode(clip_vision, image3, 'none')
+    samples = FramePackSingleFrameSampler(model, conditioning, conditioning2, latent, 30, True, 0.15, 1, 7.520000000000001, 0, {seed}, 9, 25, 'unipc_bh1', True, clip_vision_output, latent, 1, latent2, clip_vision_output2, 5, 10, None, None)
+    image4 = VAEDecodeTiled(samples, vae, 256, 64, 64, 8)
+    SaveImage(image4, 'ComfyUI')
+"""
+    return script_content
+
+def main():
+    SEED = 661695664686456
+    # 下载所有 sketch 图片
+    print("Downloading sketch images from Hugging Face dataset...")
+    image_files = download_sketch_images()
+    total_images = len(image_files)
+    print(f"Downloaded {total_images} images.")
+    
+    # 确保输出目录存在
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    
+    # 循环处理每张图片
+    for idx, image_file in enumerate(image_files):
+        print(f"Processing image {idx + 1}/{total_images}: {image_file}")
+        
+        # 构建工作流脚本
+        script = generate_script(image_file, SEED)
+        
+        # 写入文件
+        with open('run_comfyui_workflow.py', 'w') as f:
+            f.write(script)
+        
+        # 获取当前输出数量
+        initial_count = get_latest_output_count()
+        
+        # 运行脚本
+        print(f"Generating image with seed: {SEED}")
+        subprocess.run([PYTHON_PATH, 'run_comfyui_workflow.py'])
+        
+        # 等待新输出
+        if not wait_for_new_output(initial_count):
+            print("Timeout waiting for new output.")
+        
+        # 更新种子
+        SEED -= 1
+        
+        print(f"Finished processing {image_file}\n")
+
+if __name__ == "__main__":
+    main()
+```
+
 This repository is derived from [ComfyUI-FramePackWrapper_Plus](https://github.com/ShmuelRonen/ComfyUI-FramePackWrapper_Plus/tree/main) and was created for my own use. I have little intention to maintain it. Please feel free to improve it, especially Framepack 1f-mc.
 
 An improved wrapper for the FramePack project that allows the creation of videos of any length based on reference images and LoRAs with F1 sampler.
