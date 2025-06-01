@@ -1,6 +1,7 @@
 # ComfyUI-FramePackWrapper_PlusOne
 
 ## Scaramouche Demo
+- https://huggingface.co/tori29umai/FramePack_LoRA/blob/main/body2img_V7_kisekaeichi_dim4_1e-3_512_768-000140.safetensors
 
 ```python
 vim run_hy.py
