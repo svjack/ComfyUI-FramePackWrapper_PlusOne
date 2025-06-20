@@ -1,5 +1,5 @@
 #### relight model: https://huggingface.co/ippanorc/animetic_light/resolve/main/animetic_light.safetensors
-#### relight workflow: 
+#### relight workflow: https://github.com/svjack/ComfyUI-FramePackWrapper_PlusOne/blob/main/workflow_animetic_light_edit.json
 
 from comfy_script.runtime import *
 load()
