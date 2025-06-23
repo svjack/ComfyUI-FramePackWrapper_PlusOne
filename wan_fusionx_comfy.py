@@ -1,3 +1,5 @@
+# https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX
+
 # T2V
 #### model: https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/blob/main/FusionX_LoRa/Wan2.1_T2V_14B_FusionX_LoRA.safetensors
 
@@ -124,6 +126,9 @@ if __name__ == "__main__":
     main()
 
 # I2V
+# https://civitai.com/models/1678575?modelVersionId=1900322
+# https://civitai.com/models/1681541?modelVersionId=1903275
+
 from comfy_script.runtime import *
 load()
 from comfy_script.runtime.nodes import *
