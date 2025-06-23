@@ -101,7 +101,7 @@ def main():
         # Get current MP4 count
         initial_count = get_latest_mp4_count()
 
-        prompt = prompt.replace("'", "").replace('"', '').replace("‘", "").replace("’", "").replace("“", "").replace("" ,"”")
+        prompt = prompt.replace("'", "").replace('"', '').replace("‘", "").replace("’", "").replace("“", "").replace("”", "")
         # Generate and run script
         script = generate_script(prompt, SEED)
         with open('run_comfyui_workflow.py', 'w') as f:
