@@ -343,7 +343,7 @@ with Workflow():
     image, _ = LoadImage('{image_name}')
     clip_vision_output = CLIPVisionEncode(clip_vision, image, 'none')
     positive, negative, latent = WanImageToVideo(conditioning, conditioning2, vae, 1024, 768, 81, 1, clip_vision_output, image)
-    latent = KSampler(model, {seed}, 8, 1, 'euler', 'beta', positive, negative, latent, 1)
+    latent = KSampler(model, {seed}, 12, 1, 'euler', 'beta', positive, negative, latent, 1)
     image2 = VAEDecode(latent, vae)
     _ = VHSVideoCombine(image2, 16, 0, 'FusionXi2v/FusionX', 'video/h264-mp4', False, True, None, None, None)
 """
