@@ -393,3 +393,151 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+#### model https://huggingface.co/svjack/Wan_2_1_safetensors_pth/resolve/main/Phantom_Wan_14B_FusionX_LoRA.safetensors
+#### dataset https://huggingface.co/datasets/svjack/Image2Any_Armed_Police
+
+from comfy_script.runtime import *
+load()
+from comfy_script.runtime.nodes import *
+with Workflow():
+    model = UNETLoader('Phantom-Wan-14B_fp16.safetensors', 'default')
+    model = LoraLoaderModelOnly(model, 'Phantom_Wan_14B_FusionX_LoRA.safetensors', 1)
+    model = PathchSageAttentionKJ(model, 'auto')
+    model = ModelPatchTorchSettings(model, True)
+    model = ModelSamplingSD3(model, 3.0000000000000004)
+    clip = CLIPLoader('umt5_xxl_fp8_e4m3fn_scaled.safetensors', 'wan', 'default')
+    conditioning = CLIPTextEncode('''At the nuclear power plant open day, solemnity and whimsy achieve perfect harmony. On the left, CNNC's educational display features a textbook-perfect mushroom cloud simulation - its fluffy crown blooming against azure sky, the white stem tapering with scientific precision, accented by yellow '蘑菇云' text and corporate logos. To the right, an armed police mascot sits at attention in the interactive zone: his dark green uniform's star-and-laurel cap badge, red epaulets with golden stars, and 'People's Police' armband glinting under sunlight. With one hand in pocket and oversized earnest eyes, this disciplined yet approachable figure reassures visiting children. The primal energy of nuclear science and protective symbolism of law enforcement engage in silent dialogue within this blue-and-yellow themed educational space.''', clip)
+    conditioning2 = CLIPTextEncode('色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿', clip)
+    vae = VAELoader('wan_2.1_vae.safetensors')
+    image, _ = LoadImage('PLA.jpg')
+    image2, _ = LoadImage('image (68).jpg')
+    image3 = ImageBatch(image, image2)
+    positive, negative_text, negative_img_text, latent = WanPhantomSubjectToVideo(conditioning, conditioning2, vae, 1024, 576, 121, 1, image3)
+    conditioning3 = ConditioningCombine(negative_text, negative_img_text)
+    latent = KSampler(model, 1049199754871590, 8, 1, 'uni_pc', 'simple', positive, conditioning3, latent, 1)
+    image4 = VAEDecode(latent, vae)
+    _ = VHSVideoCombine(image4, 24, 0, 'FusionXi2v/FusionX', 'video/h264-mp4', False, True, None, None, None)
+
+vim run_phantom_batch.py
+
+import os
+import time
+import subprocess
+from pathlib import Path
+from datasets import load_dataset
+
+# Configuration
+SEED = 661695664686456
+OUTPUT_DIR = 'ComfyUI/output/FusionXi2v'
+INPUT_DIR = 'ComfyUI/input'
+PYTHON_PATH = '/environment/miniconda3/envs/system/bin/python'
+
+def get_latest_output_count():
+    """Return the number of MP4 files in the output directory"""
+    try:
+        return len(list(Path(OUTPUT_DIR).glob('*.mp4')))
+    except:
+        return 0
+
+def wait_for_new_output(initial_count):
+    """Wait until a new MP4 file appears in the output directory"""
+    timeout = 6000  # seconds
+    start_time = time.time()
+    
+    while time.time() - start_time < timeout:
+        current_count = get_latest_output_count()
+        if current_count > initial_count:
+            time.sleep(1)  # additional 1 second delay
+            return True
+        time.sleep(0.5)
+    return False
+
+def download_dataset_images():
+    """Download images from Hugging Face dataset"""
+    os.makedirs(INPUT_DIR, exist_ok=True)
+    
+    # Load dataset
+    dataset = load_dataset("svjack/Image2Any_Armed_Police")
+    
+    # Download images and save prompts
+    image_files = []
+    for i, item in enumerate(dataset['train']):
+        image = item['image']
+        image_path = os.path.join(INPUT_DIR, f"input_{i}.jpg")
+        image.save(image_path)
+        image_files.append((f"input_{i}.jpg", item['english_prompt']))
+    
+    return image_files
+
+def generate_script(image_name, prompt, seed):
+    """Generate the ComfyUI script with the given image and prompt"""
+    script_content = f"""from comfy_script.runtime import *
+load()
+from comfy_script.runtime.nodes import *
+with Workflow():
+    model = UNETLoader('Phantom-Wan-14B_fp16.safetensors', 'default')
+    model = LoraLoaderModelOnly(model, 'Phantom_Wan_14B_FusionX_LoRA.safetensors', 1)
+    model = PathchSageAttentionKJ(model, 'auto')
+    model = ModelPatchTorchSettings(model, True)
+    model = ModelSamplingSD3(model, 3.0000000000000004)
+    clip = CLIPLoader('umt5_xxl_fp8_e4m3fn_scaled.safetensors', 'wan', 'default')
+    conditioning = CLIPTextEncode('{prompt}', clip)
+    conditioning2 = CLIPTextEncode('色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿', clip)
+    vae = VAELoader('wan_2.1_vae.safetensors')
+    image, _ = LoadImage('PLA.jpg')
+    image2, _ = LoadImage('{image_name}')
+    image3 = ImageBatch(image, image2)
+    positive, negative_text, negative_img_text, latent = WanPhantomSubjectToVideo(conditioning, conditioning2, vae, 1024, 576, 121, 1, image3)
+    conditioning3 = ConditioningCombine(negative_text, negative_img_text)
+    latent = KSampler(model, {seed}, 8, 1, 'uni_pc', 'simple', positive, conditioning3, latent, 1)
+    image4 = VAEDecode(latent, vae)
+    _ = VHSVideoCombine(image4, 24, 0, 'FusionXi2v/FusionX', 'video/h264-mp4', False, True, None, None, None)
+"""
+    return script_content
+
+def main():
+    SEED = 661695664686456
+    # Download dataset images and get prompts
+    print("Downloading images from Hugging Face dataset...")
+    image_prompt_pairs = download_dataset_images()
+    total_items = len(image_prompt_pairs)
+    print(f"Downloaded {total_items} images with prompts.")
+    
+    # Ensure output directory exists
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    
+    # Process each image
+    for idx, (image_file, prompt) in enumerate(image_prompt_pairs):
+        print(f"Processing item {idx + 1}/{total_items}: {image_file}")
+        print(f"Prompt: {prompt[:100]}...")  # Print first 100 characters
+        
+        # Clean prompt text
+        prompt = prompt.replace("'", "").replace('"', '').replace("‘", "").replace("’", "").replace("“", "").replace("”", "")
+        
+        # Generate and run script
+        script = generate_script(image_file, prompt.replace("'", "\\'"), SEED)
+        
+        # Write to file
+        with open('run_comfyui_workflow.py', 'w') as f:
+            f.write(script)
+        
+        # Get current output count
+        initial_count = get_latest_output_count()
+        
+        # Run script
+        print(f"Generating video with seed: {SEED}")
+        subprocess.run([PYTHON_PATH, 'run_comfyui_workflow.py'])
+        
+        # Wait for new output
+        if not wait_for_new_output(initial_count):
+            print("Timeout waiting for new output.")
+        
+        # Update seed
+        SEED -= 1
+        
+        print(f"Finished processing {image_file}\n")
+
+if __name__ == "__main__":
+    main()
